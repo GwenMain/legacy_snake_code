@@ -1,187 +1,195 @@
-﻿using System.Diagnostics;
-using static System.Console;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Snake
 {
     class Program
     {
+        private const int WindowHeight = 16;
+        private const int WindowWidth = 32;
+        private const int InitialScore = 5;
+        private const int MoveDelayMs = 500;
+
         static void Main()
         {
-            WindowHeight = 16;
-            WindowWidth = 32;
+            ConsoleSetup();
+            RunGame();
+        }
 
-            var rand = new Random();
-            var score = 5;
+        private static void ConsoleSetup()
+        {
+            Console.WindowHeight = WindowHeight;
+            Console.WindowWidth = WindowWidth;
+        }
 
-            // Inicializace hlavy a ovoce
+        private static void RunGame()
+        {
+            var random = new Random();
+            int score = InitialScore;
+
             var head = new Pixel(WindowWidth / 2, WindowHeight / 2, ConsoleColor.Red);
-            var berry = new Pixel(rand.Next(1, WindowWidth - 2), rand.Next(1, WindowHeight - 2), ConsoleColor.Cyan);
-
+            var berry = GenerateBerry(random);
             var body = new List<Pixel>();
-            var currentMovement = Direction.Right;
-            var gameover = false;
+            var currentDirection = Direction.Right;
+            bool gameover = false;
 
-            // Hlavní herní smyčka
             while (!gameover)
             {
-                Clear();
-
-                // Zkontroluj kolize se stěnami
-                gameover |= (head.XPos == WindowWidth - 1 || head.XPos == 0 || head.YPos == WindowHeight - 1 || head.YPos == 0);
-
-                // Vykresli hranice
+                Console.Clear();
                 DrawBorder();
 
-                // Zkontroluj, zda hráč sežral ovoce
-                if (berry.XPos == head.XPos && berry.YPos == head.YPos)
+                if (CheckCollision(head))
+                {
+                    gameover = true;
+                    break;
+                }
+
+                if (CheckBerryCollision(ref head, ref berry, random))
                 {
                     score++;
-                    berry = new Pixel(rand.Next(1, WindowWidth - 2), rand.Next(1, WindowHeight - 2), ConsoleColor.Cyan);
                 }
 
-                // Vykresli tělo hada a kontroluj kolize s ním
-                for (int i = 0; i < body.Count; i++)
-                {
-                    DrawPixel(body[i]);
-                    gameover |= (body[i].XPos == head.XPos && body[i].YPos == head.YPos);
-                }
+                DrawSnake(body, ref gameover, head);
+                if (gameover) break;
 
-                // Pokud je hra u konce, ukonči smyčku
-                if (gameover)
-                    break;
-
-                // Vykresli hlavu a ovoce
                 DrawPixel(head);
                 DrawPixel(berry);
 
-                // Zpoždění pohybu hada (500ms)
-                var sw = Stopwatch.StartNew();
-                while (sw.ElapsedMilliseconds <= 500)
-                {
-                    currentMovement = ReadMovement(currentMovement);
-                }
+                DelayMovement(ref currentDirection);
 
-                // Přidej novou pozici těla
-                body.Add(new Pixel(head.XPos, head.YPos, ConsoleColor.Green));
+                body.Add(new Pixel(head.X, head.Y, ConsoleColor.Green));
+                MoveHead(ref head, currentDirection);
 
-                // Pohyb hada podle aktuálního směru
-                MoveHead(ref head, currentMovement);
-
-                // Pokud délka těla přesáhne skóre, odstraň první část
                 if (body.Count > score)
                 {
                     body.RemoveAt(0);
                 }
             }
 
-            // Vykresli Game Over
-            SetCursorPosition(WindowWidth / 5, WindowHeight / 2);
-            WriteLine($"Game over, Score: {score - 5}");
-            SetCursorPosition(WindowWidth / 5, WindowHeight / 2 + 1);
-            ReadKey();
+            DisplayGameOver(score);
         }
 
-        // Funkce pro čtení pohybu
-        static Direction ReadMovement(Direction movement)
-        {
-            if (KeyAvailable)
-            {
-                var key = ReadKey(true).Key;
+        private static bool CheckCollision(Pixel head) =>
+            head.X == WindowWidth - 1 || head.X == 0 || head.Y == WindowHeight - 1 || head.Y == 0;
 
-                // Umožní změnu směru pouze na platný směr (ne opačný)
-                if (key == ConsoleKey.UpArrow && movement != Direction.Down)
+        private static bool CheckBerryCollision(ref Pixel head, ref Pixel berry, Random random)
+        {
+            if (berry.X == head.X && berry.Y == head.Y)
+            {
+                berry = GenerateBerry(random);
+                return true;
+            }
+            return false;
+        }
+
+        private static Pixel GenerateBerry(Random random) =>
+            new Pixel(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.Cyan);
+
+        private static void DrawSnake(List<Pixel> body, ref bool gameover, Pixel head)
+        {
+            foreach (var segment in body)
+            {
+                DrawPixel(segment);
+                if (segment.X == head.X && segment.Y == head.Y)
                 {
-                    movement = Direction.Up;
-                }
-                else if (key == ConsoleKey.DownArrow && movement != Direction.Up)
-                {
-                    movement = Direction.Down;
-                }
-                else if (key == ConsoleKey.LeftArrow && movement != Direction.Right)
-                {
-                    movement = Direction.Left;
-                }
-                else if (key == ConsoleKey.RightArrow && movement != Direction.Left)
-                {
-                    movement = Direction.Right;
+                    gameover = true;
                 }
             }
-
-            return movement;
         }
 
-        // Funkce pro vykreslení pixelu
-        static void DrawPixel(Pixel pixel)
+        private static void DelayMovement(ref Direction direction)
         {
-            SetCursorPosition(pixel.XPos, pixel.YPos);
-            ForegroundColor = pixel.ScreenColor;
-            Write("■");
-            SetCursorPosition(0, 0);
+            var stopwatch = Stopwatch.StartNew();
+            while (stopwatch.ElapsedMilliseconds <= MoveDelayMs)
+            {
+                direction = ReadMovement(direction);
+            }
         }
 
-        // Funkce pro vykreslení hranic
-        static void DrawBorder()
+        private static void DisplayGameOver(int score)
+        {
+            Console.SetCursorPosition(WindowWidth / 5, WindowHeight / 2);
+            Console.WriteLine($"Game Over! Score: {score - InitialScore}");
+            Console.SetCursorPosition(WindowWidth / 5, WindowHeight / 2 + 1);
+            Console.ReadKey();
+        }
+
+        private static Direction ReadMovement(Direction currentDirection)
+        {
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true).Key;
+                currentDirection = key switch
+                {
+                    ConsoleKey.UpArrow when currentDirection != Direction.Down => Direction.Up,
+                    ConsoleKey.DownArrow when currentDirection != Direction.Up => Direction.Down,
+                    ConsoleKey.LeftArrow when currentDirection != Direction.Right => Direction.Left,
+                    ConsoleKey.RightArrow when currentDirection != Direction.Left => Direction.Right,
+                    _ => currentDirection
+                };
+            }
+            return currentDirection;
+        }
+
+        private static void DrawPixel(Pixel pixel)
+        {
+            Console.SetCursorPosition(pixel.X, pixel.Y);
+            Console.ForegroundColor = pixel.Color;
+            Console.Write("■");
+            Console.SetCursorPosition(0, 0);
+        }
+
+        private static void DrawBorder()
         {
             for (int i = 0; i < WindowWidth; i++)
             {
-                SetCursorPosition(i, 0);
-                Write("■");
-
-                SetCursorPosition(i, WindowHeight - 1);
-                Write("■");
+                Console.SetCursorPosition(i, 0);
+                Console.Write("■");
+                Console.SetCursorPosition(i, WindowHeight - 1);
+                Console.Write("■");
             }
-
             for (int i = 0; i < WindowHeight; i++)
             {
-                SetCursorPosition(0, i);
-                Write("■");
-
-                SetCursorPosition(WindowWidth - 1, i);
-                Write("■");
+                Console.SetCursorPosition(0, i);
+                Console.Write("■");
+                Console.SetCursorPosition(WindowWidth - 1, i);
+                Console.Write("■");
             }
         }
 
-        // Funkce pro pohyb hada
-        static void MoveHead(ref Pixel head, Direction direction)
+        private static void MoveHead(ref Pixel head, Direction direction)
         {
-            switch (direction)
+            head = direction switch
             {
-                case Direction.Up:
-                    head.YPos--;
-                    break;
-                case Direction.Down:
-                    head.YPos++;
-                    break;
-                case Direction.Left:
-                    head.XPos--;
-                    break;
-                case Direction.Right:
-                    head.XPos++;
-                    break;
-            }
+                Direction.Up => new Pixel(head.X, head.Y - 1, head.Color),
+                Direction.Down => new Pixel(head.X, head.Y + 1, head.Color),
+                Direction.Left => new Pixel(head.X - 1, head.Y, head.Color),
+                Direction.Right => new Pixel(head.X + 1, head.Y, head.Color),
+                _ => head
+            };
         }
 
-        // Struktura pro pixel
         struct Pixel
         {
-            public Pixel(int xPos, int yPos, ConsoleColor color)
+            public int X { get; }
+            public int Y { get; }
+            public ConsoleColor Color { get; }
+
+            public Pixel(int x, int y, ConsoleColor color)
             {
-                XPos = xPos;
-                YPos = yPos;
-                ScreenColor = color;
+                X = x;
+                Y = y;
+                Color = color;
             }
-            public int XPos { get; set; }
-            public int YPos { get; set; }
-            public ConsoleColor ScreenColor { get; set; }
         }
 
-        // Enum pro směry
         enum Direction
         {
             Up,
             Down,
-            Right,
-            Left
+            Left,
+            Right
         }
     }
 }
