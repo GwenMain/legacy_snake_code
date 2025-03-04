@@ -6,30 +6,68 @@ namespace Snake
 {
     class Program
     {
-        private const int WindowHeight = 16;
-        private const int WindowWidth = 32;
+        private static int WindowHeight = 16;
+        private static int WindowWidth = 32;
         private const int InitialScore = 5;
         private const int MoveDelayMs = 500;
 
         static void Main()
         {
+            ShowMenu();
             ConsoleSetup();
             RunGame();
+        }
+
+        private static void ShowMenu()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Snake Game ===");
+            Console.WriteLine("1. Start Game");
+            Console.WriteLine("2. Settings");
+            Console.WriteLine("3. Exit");
+            Console.Write("Select an option: ");
+
+            switch (Console.ReadKey().Key)
+            {
+                case ConsoleKey.D1:
+                    return;
+                case ConsoleKey.D2:
+                    ShowSettings();
+                    break;
+                case ConsoleKey.D3:
+                    Environment.Exit(0);
+                    break;
+                default:
+                    ShowMenu();
+                    break;
+            }
+        }
+
+        private static void ShowSettings()
+        {
+            Console.Clear();
+            Console.Write("Enter window width (min 20, max 50): ");
+            if (int.TryParse(Console.ReadLine(), out int width) && width >= 20 && width <= 50)
+                WindowWidth = width;
+
+            Console.Write("Enter window height (min 10, max 30): ");
+            if (int.TryParse(Console.ReadLine(), out int height) && height >= 10 && height <= 30)
+                WindowHeight = height;
+
+            ShowMenu();
         }
 
         private static void ConsoleSetup()
         {
             Console.WindowHeight = WindowHeight;
             Console.WindowWidth = WindowWidth;
+            Console.CursorVisible = false;
         }
 
         private static void RunGame()
         {
-            Console.CursorVisible = false;
-
             var random = new Random();
             int score = InitialScore;
-
             var head = new Pixel(WindowWidth / 2, WindowHeight / 2, ConsoleColor.Red);
             var fruit = GenerateFruit(random);
             var body = new List<Pixel>();
@@ -87,9 +125,7 @@ namespace Snake
         }
 
         private static Fruit GenerateFruit(Random random) =>
-     new Fruit(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.DarkYellow);
-
-
+            new Fruit(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.DarkYellow);
 
         private static void DrawSnake(List<Pixel> body, ref bool gameover, Pixel head)
         {
@@ -147,7 +183,7 @@ namespace Snake
 
         private static void DrawBorder()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;  // Ensure border is always white
+            Console.ForegroundColor = ConsoleColor.Cyan;
             for (int i = 0; i < WindowWidth; i++)
             {
                 Console.SetCursorPosition(i, 0);
@@ -164,7 +200,6 @@ namespace Snake
             }
         }
 
-
         private static void MoveHead(ref Pixel head, Direction direction)
         {
             head = direction switch
@@ -178,7 +213,7 @@ namespace Snake
         }
     }
 
-    class Fruit
+class Fruit
     {
         public int XPos { get; }
         public int YPos { get; }
