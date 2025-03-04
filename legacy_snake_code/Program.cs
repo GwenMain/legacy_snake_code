@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Snake
 {
@@ -10,12 +12,42 @@ namespace Snake
         private static int WindowWidth = 32;
         private const int InitialScore = 5;
         private const int MoveDelayMs = 500;
+        private const string ConfigFile = "settings.ini";
 
         static void Main()
         {
+            LoadSettings();
             ShowMenu();
             ConsoleSetup();
             RunGame();
+        }
+
+        private static void LoadSettings()
+        {
+            if (File.Exists(ConfigFile))
+            {
+                var lines = File.ReadAllLines(ConfigFile);
+                foreach (var line in lines)
+                {
+                    var parts = line.Split('=');
+                    if (parts.Length == 2)
+                    {
+                        if (parts[0] == "WindowWidth" && int.TryParse(parts[1], out int width))
+                            WindowWidth = width;
+                        if (parts[0] == "WindowHeight" && int.TryParse(parts[1], out int height))
+                            WindowHeight = height;
+                    }
+                }
+            }
+        }
+
+        private static void SaveSettings()
+        {
+            File.WriteAllLines(ConfigFile, new[]
+            {
+                $"WindowWidth={WindowWidth}",
+                $"WindowHeight={WindowHeight}"
+            });
         }
 
         private static void ShowMenu()
@@ -54,6 +86,7 @@ namespace Snake
             if (int.TryParse(Console.ReadLine(), out int height) && height >= 10 && height <= 30)
                 WindowHeight = height;
 
+            SaveSettings();
             ShowMenu();
         }
 
@@ -213,7 +246,7 @@ namespace Snake
         }
     }
 
-class Fruit
+    class Fruit
     {
         public int XPos { get; }
         public int YPos { get; }
