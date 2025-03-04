@@ -109,6 +109,8 @@ namespace Snake
             var currentDirection = Direction.Right;
             bool gameover = false;
 
+            int moveDelay = MoveDelayMs; // Set initial delay
+
             while (!gameover)
             {
                 Console.Clear();
@@ -123,6 +125,8 @@ namespace Snake
                 if (CheckFruitCollision(ref head, ref fruit, random))
                 {
                     score++;
+                    // Reduce the delay after eating fruit to speed up the snake
+                    moveDelay = Math.Max(100, moveDelay - 25); // Minimum delay of 100 ms
                 }
 
                 DrawSnake(body, ref gameover, head);
@@ -131,7 +135,7 @@ namespace Snake
                 DrawPixel(head);
                 fruit.Draw();
 
-                DelayMovement(ref currentDirection);
+                DelayMovement(ref currentDirection, moveDelay); // Use the updated move delay
 
                 body.Add(new Pixel(head.X, head.Y, ConsoleColor.Green));
                 MoveHead(ref head, currentDirection);
@@ -190,6 +194,15 @@ namespace Snake
             Console.WriteLine($"Game Over! Score: {score - InitialScore}");
             Console.SetCursorPosition(WindowWidth / 5, WindowHeight / 2 + 1);
             Console.ReadKey();
+        }
+
+        private static void DelayMovement(ref Direction direction, int moveDelay)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            while (stopwatch.ElapsedMilliseconds <= moveDelay)
+            {
+                direction = ReadMovement(direction);
+            }
         }
 
         private static Direction ReadMovement(Direction currentDirection)
