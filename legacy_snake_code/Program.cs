@@ -99,6 +99,8 @@ namespace Snake
 
         private static void RunGame()
         {
+            Console.CursorVisible = false;
+
             var random = new Random();
             int score = InitialScore;
             var head = new Pixel(WindowWidth / 2, WindowHeight / 2, ConsoleColor.Red);
@@ -160,6 +162,7 @@ namespace Snake
         private static Fruit GenerateFruit(Random random) =>
             new Fruit(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.DarkYellow);
 
+
         private static void DrawSnake(List<Pixel> body, ref bool gameover, Pixel head)
         {
             foreach (var segment in body)
@@ -216,7 +219,9 @@ namespace Snake
 
         private static void DrawBorder()
         {
+
             Console.ForegroundColor = ConsoleColor.Cyan;
+
             for (int i = 0; i < WindowWidth; i++)
             {
                 Console.SetCursorPosition(i, 0);
@@ -232,6 +237,7 @@ namespace Snake
                 Console.Write("■");
             }
         }
+
 
         private static void MoveHead(ref Pixel head, Direction direction)
         {
