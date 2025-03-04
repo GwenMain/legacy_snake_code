@@ -1,26 +1,100 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Snake
 {
     class Program
     {
-        private const int WindowHeight = 16;
-        private const int WindowWidth = 32;
+        private static int WindowHeight = 16;
+        private static int WindowWidth = 32;
         private const int InitialScore = 5;
         private const int MoveDelayMs = 500;
+        private const string ConfigFile = "settings.ini";
 
         static void Main()
         {
+            LoadSettings();
+            ShowMenu();
             ConsoleSetup();
             RunGame();
+        }
+
+        private static void LoadSettings()
+        {
+            if (File.Exists(ConfigFile))
+            {
+                var lines = File.ReadAllLines(ConfigFile);
+                foreach (var line in lines)
+                {
+                    var parts = line.Split('=');
+                    if (parts.Length == 2)
+                    {
+                        if (parts[0] == "WindowWidth" && int.TryParse(parts[1], out int width))
+                            WindowWidth = width;
+                        if (parts[0] == "WindowHeight" && int.TryParse(parts[1], out int height))
+                            WindowHeight = height;
+                    }
+                }
+            }
+        }
+
+        private static void SaveSettings()
+        {
+            File.WriteAllLines(ConfigFile, new[]
+            {
+                $"WindowWidth={WindowWidth}",
+                $"WindowHeight={WindowHeight}"
+            });
+        }
+
+        private static void ShowMenu()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Snake Game ===");
+            Console.WriteLine("1. Start Game");
+            Console.WriteLine("2. Settings");
+            Console.WriteLine("3. Exit");
+            Console.Write("Select an option: ");
+
+            switch (Console.ReadKey().Key)
+            {
+                case ConsoleKey.D1:
+                    return;
+                case ConsoleKey.D2:
+                    ShowSettings();
+                    break;
+                case ConsoleKey.D3:
+                    Environment.Exit(0);
+                    break;
+                default:
+                    ShowMenu();
+                    break;
+            }
+        }
+
+        private static void ShowSettings()
+        {
+            Console.Clear();
+            Console.Write("Enter window width (min 20, max 50): ");
+            if (int.TryParse(Console.ReadLine(), out int width) && width >= 20 && width <= 50)
+                WindowWidth = width;
+
+            Console.Write("Enter window height (min 10, max 30): ");
+            if (int.TryParse(Console.ReadLine(), out int height) && height >= 10 && height <= 30)
+                WindowHeight = height;
+
+            SaveSettings();
+            ShowMenu();
         }
 
         private static void ConsoleSetup()
         {
             Console.WindowHeight = WindowHeight;
             Console.WindowWidth = WindowWidth;
+            Console.CursorVisible = false;
         }
 
         private static void RunGame()
@@ -29,7 +103,6 @@ namespace Snake
 
             var random = new Random();
             int score = InitialScore;
-
             var head = new Pixel(WindowWidth / 2, WindowHeight / 2, ConsoleColor.Red);
             var fruit = GenerateFruit(random);
             var body = new List<Pixel>();
@@ -87,8 +160,7 @@ namespace Snake
         }
 
         private static Fruit GenerateFruit(Random random) =>
-     new Fruit(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.DarkYellow);
-
+            new Fruit(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.DarkYellow);
 
 
         private static void DrawSnake(List<Pixel> body, ref bool gameover, Pixel head)
@@ -147,7 +219,9 @@ namespace Snake
 
         private static void DrawBorder()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;  // Ensure border is always white
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+
             for (int i = 0; i < WindowWidth; i++)
             {
                 Console.SetCursorPosition(i, 0);
