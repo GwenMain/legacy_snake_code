@@ -25,11 +25,13 @@ namespace Snake
 
         private static void RunGame()
         {
+            Console.CursorVisible = false;
+
             var random = new Random();
             int score = InitialScore;
 
             var head = new Pixel(WindowWidth / 2, WindowHeight / 2, ConsoleColor.Red);
-            var berry = GenerateBerry(random);
+            var fruit = GenerateFruit(random);
             var body = new List<Pixel>();
             var currentDirection = Direction.Right;
             bool gameover = false;
@@ -45,7 +47,7 @@ namespace Snake
                     break;
                 }
 
-                if (CheckBerryCollision(ref head, ref berry, random))
+                if (CheckFruitCollision(ref head, ref fruit, random))
                 {
                     score++;
                 }
@@ -54,7 +56,7 @@ namespace Snake
                 if (gameover) break;
 
                 DrawPixel(head);
-                DrawPixel(berry);
+                fruit.Draw();
 
                 DelayMovement(ref currentDirection);
 
@@ -68,23 +70,26 @@ namespace Snake
             }
 
             DisplayGameOver(score);
+            Console.CursorVisible = true;
         }
 
         private static bool CheckCollision(Pixel head) =>
             head.X == WindowWidth - 1 || head.X == 0 || head.Y == WindowHeight - 1 || head.Y == 0;
 
-        private static bool CheckBerryCollision(ref Pixel head, ref Pixel berry, Random random)
+        private static bool CheckFruitCollision(ref Pixel head, ref Fruit fruit, Random random)
         {
-            if (berry.X == head.X && berry.Y == head.Y)
+            if (fruit.XPos == head.X && fruit.YPos == head.Y)
             {
-                berry = GenerateBerry(random);
+                fruit = GenerateFruit(random);
                 return true;
             }
             return false;
         }
 
-        private static Pixel GenerateBerry(Random random) =>
-            new Pixel(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.Cyan);
+        private static Fruit GenerateFruit(Random random) =>
+     new Fruit(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2), ConsoleColor.DarkYellow);
+
+
 
         private static void DrawSnake(List<Pixel> body, ref bool gameover, Pixel head)
         {
@@ -142,6 +147,7 @@ namespace Snake
 
         private static void DrawBorder()
         {
+            Console.ForegroundColor = ConsoleColor.Cyan;  // Ensure border is always white
             for (int i = 0; i < WindowWidth; i++)
             {
                 Console.SetCursorPosition(i, 0);
@@ -158,6 +164,7 @@ namespace Snake
             }
         }
 
+
         private static void MoveHead(ref Pixel head, Direction direction)
         {
             head = direction switch
@@ -169,27 +176,48 @@ namespace Snake
                 _ => head
             };
         }
+    }
 
-        struct Pixel
+    class Fruit
+    {
+        public int XPos { get; }
+        public int YPos { get; }
+        public ConsoleColor Color { get; }
+
+        public Fruit(int xPos, int yPos, ConsoleColor color)
         {
-            public int X { get; }
-            public int Y { get; }
-            public ConsoleColor Color { get; }
-
-            public Pixel(int x, int y, ConsoleColor color)
-            {
-                X = x;
-                Y = y;
-                Color = color;
-            }
+            XPos = xPos;
+            YPos = yPos;
+            Color = color;
         }
 
-        enum Direction
+        public void Draw()
         {
-            Up,
-            Down,
-            Left,
-            Right
+            Console.SetCursorPosition(XPos, YPos);
+            Console.ForegroundColor = Color;
+            Console.Write("■");
         }
+    }
+
+    struct Pixel
+    {
+        public int X { get; }
+        public int Y { get; }
+        public ConsoleColor Color { get; }
+
+        public Pixel(int x, int y, ConsoleColor color)
+        {
+            X = x;
+            Y = y;
+            Color = color;
+        }
+    }
+
+    enum Direction
+    {
+        Up,
+        Down,
+        Left,
+        Right
     }
 }
