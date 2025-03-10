@@ -41,7 +41,7 @@ namespace Snake
             var currentDirection = Direction.Right;
             bool gameover = false;
 
-            int moveDelay = MoveDelayMs; // Set initial delay
+            int moveDelay = MoveDelayMs; // Původní pohybová zpoždění
 
             while (!gameover)
             {
@@ -57,8 +57,6 @@ namespace Snake
                 if (CheckFruitCollision(ref head, ref fruit, random))
                 {
                     score++;
-                    // Reduce the delay after eating fruit to speed up the snake
-                    moveDelay = Math.Max(100, moveDelay - 25); // Minimum delay of 100 ms
                 }
 
                 DrawSnake(body, ref gameover, head);
@@ -67,7 +65,7 @@ namespace Snake
                 DrawPixel(head);
                 fruit.Draw();
 
-                DelayMovement(ref currentDirection, moveDelay); // Use the updated move delay
+                DelayMovement(ref currentDirection, moveDelay); // Použití původního moveDelay
 
                 body.Add(new Pixel(head.X, head.Y, ConsoleColor.Green));
                 MoveHead(ref head, currentDirection);
