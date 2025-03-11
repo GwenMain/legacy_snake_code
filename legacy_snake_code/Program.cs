@@ -109,21 +109,13 @@ namespace Snake
             }
         }
 
-        private static void DelayMovement(ref Direction direction)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            while (stopwatch.ElapsedMilliseconds <= MoveDelayMs)
-            {
-                direction = ReadMovement(direction);
-            }
-        }
-
         private static void DisplayGameOver(int score)
         {
             Console.SetCursorPosition(WindowWidth / 5, WindowHeight / 2);
             Console.WriteLine($"Game Over! Score: {score - InitialScore}");
             Console.SetCursorPosition(WindowWidth / 5, WindowHeight / 2 + 1);
             Console.ReadKey();
+
         }
 
         private static void DelayMovement(ref Direction direction, int moveDelay)
