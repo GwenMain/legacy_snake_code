@@ -4,123 +4,82 @@ using System.Diagnostics;
 
 namespace Snake
 {
-    class Program
+    class Game
     {
-        private static int WindowHeight = 16;
-        private static int WindowWidth = 32;
+        private const int WindowHeight = 16;
+        private const int WindowWidth = 32;
         private const int InitialScore = 5;
-        private const int MoveDelayMs = 500;
+        private const int MoveDelayMs = 200;
 
-        static void Main()
+        private Renderer renderer;
+        private Snake snake;
+        private Berry berry;
+        private bool gameover;
+        private int score;
+        private Direction currentDirection;
+        private Random random;
+
+        public Game()
         {
             ConsoleSetup();
-            RunGame();
+            renderer = new Renderer(WindowWidth, WindowHeight);
+            random = new Random();
+            snake = new Snake(WindowWidth / 2, WindowHeight / 2, 3);
+            berry = new Berry(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2));
+            score = InitialScore;
+            currentDirection = Direction.Right;
+            gameover = false;
         }
 
-        private static void ConsoleSetup()
+        private void ConsoleSetup()
         {
             Console.WindowHeight = WindowHeight;
             Console.WindowWidth = WindowWidth;
             Console.CursorVisible = false;
         }
 
-        private static void RunGame()
+        public void Run()
         {
-            Console.CursorVisible = false;
-
-            var random = new Random();
-            int score = InitialScore;
-            var head = new SnakeSegment(WindowWidth / 2, WindowHeight / 2, ConsoleColor.Red);
-            var fruit = GenerateFruit(random);
-            var body = new List<SnakeSegment>();
-            var currentDirection = Direction.Right;
-            bool gameover = false;
-
-            int moveDelay = MoveDelayMs;
+            // První krok bez čekání
+            snake.Move(currentDirection);
 
             while (!gameover)
             {
                 Console.Clear();
-                DrawBorder();
+                renderer.DrawBorder();
+                renderer.DrawSnake(snake);
+                renderer.DrawBerry(berry);
 
-                if (CheckCollision(head))
+                if (snake.CheckCollision(WindowWidth, WindowHeight))
                 {
                     gameover = true;
                     break;
                 }
 
-                if (CheckFruitCollision(ref head, ref fruit, random))
+                if (berry.CheckCollision(snake.Head))
                 {
                     score++;
+                    berry.Respawn(random, WindowWidth, WindowHeight);
+                    snake.Grow();
                 }
 
-                DrawSnake(body, ref gameover, head);
-                if (gameover) break;
-
-                head.Draw();
-                fruit.Draw();
-
-                DelayMovement(ref currentDirection, moveDelay);
-
-                body.Add(new SnakeSegment(head.X, head.Y, ConsoleColor.Green));
-                MoveHead(ref head, currentDirection);
-
-                if (body.Count > score)
-                {
-                    body.RemoveAt(0);
-                }
+                DelayMovement();
+                snake.Move(currentDirection);
             }
 
-            DisplayGameOver(score);
-            Console.CursorVisible = true;
+            renderer.DisplayGameOver(score - InitialScore);
         }
 
-        private static bool CheckCollision(SnakeSegment head) =>
-            head.X == WindowWidth - 1 || head.X == 0 || head.Y == WindowHeight - 1 || head.Y == 0;
-
-        private static bool CheckFruitCollision(ref SnakeSegment head, ref Fruit fruit, Random random)
-        {
-            if (fruit.X == head.X && fruit.Y == head.Y)
-            {
-                fruit = GenerateFruit(random);
-                return true;
-            }
-            return false;
-        }
-
-        private static Fruit GenerateFruit(Random random) =>
-            new Fruit(random.Next(1, WindowWidth - 2), random.Next(1, WindowHeight - 2));
-
-        private static void DrawSnake(List<SnakeSegment> body, ref bool gameover, SnakeSegment head)
-        {
-            foreach (var segment in body)
-            {
-                segment.Draw();
-                if (segment.X == head.X && segment.Y == head.Y)
-                {
-                    gameover = true;
-                }
-            }
-        }
-
-        private static void DisplayGameOver(int score)
-        {
-            Console.SetCursorPosition(WindowWidth / 5, WindowHeight / 2);
-            Console.WriteLine($"Game Over! Score: {score - InitialScore}");
-            Console.SetCursorPosition(WindowWidth / 5, WindowHeight / 2 + 1);
-            Console.ReadKey();
-        }
-
-        private static void DelayMovement(ref Direction direction, int moveDelay)
+        private void DelayMovement()
         {
             var stopwatch = Stopwatch.StartNew();
-            while (stopwatch.ElapsedMilliseconds <= moveDelay)
+            while (stopwatch.ElapsedMilliseconds <= MoveDelayMs)
             {
-                direction = ReadMovement(direction);
+                currentDirection = ReadMovement(currentDirection);
             }
         }
 
-        private static Direction ReadMovement(Direction currentDirection)
+        private Direction ReadMovement(Direction currentDirection)
         {
             if (Console.KeyAvailable)
             {
@@ -136,69 +95,152 @@ namespace Snake
             }
             return currentDirection;
         }
+    }
 
-        private static void DrawBorder()
+    class Snake
+    {
+        public List<SnakeSegment> Body { get; private set; }
+        public SnakeSegment Head => Body[^1];
+
+        public Snake(int startX, int startY, int initialSize)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-
-            for (int i = 0; i < WindowWidth; i++)
+            Body = new List<SnakeSegment>();
+            for (int i = 0; i < initialSize; i++)
             {
-                Console.SetCursorPosition(i, 0);
-                Console.Write("■");
-                Console.SetCursorPosition(i, WindowHeight - 1);
-                Console.Write("■");
-            }
-            for (int i = 0; i < WindowHeight; i++)
-            {
-                Console.SetCursorPosition(0, i);
-                Console.Write("■");
-                Console.SetCursorPosition(WindowWidth - 1, i);
-                Console.Write("■");
+                Body.Add(new SnakeSegment(startX - i, startY, i == initialSize - 1 ? ConsoleColor.Red : ConsoleColor.Green));
             }
         }
 
-        private static void MoveHead(ref SnakeSegment head, Direction direction)
+        public void Move(Direction direction)
         {
-            head = direction switch
+            var newHead = direction switch
             {
-                Direction.Up => new SnakeSegment(head.X, head.Y - 1, head.Color),
-                Direction.Down => new SnakeSegment(head.X, head.Y + 1, head.Color),
-                Direction.Left => new SnakeSegment(head.X - 1, head.Y, head.Color),
-                Direction.Right => new SnakeSegment(head.X + 1, head.Y, head.Color),
-                _ => head
+                Direction.Up => new SnakeSegment(Head.X, Head.Y - 1, ConsoleColor.Red),
+                Direction.Down => new SnakeSegment(Head.X, Head.Y + 1, ConsoleColor.Red),
+                Direction.Left => new SnakeSegment(Head.X - 1, Head.Y, ConsoleColor.Red),
+                Direction.Right => new SnakeSegment(Head.X + 1, Head.Y, ConsoleColor.Red),
+                _ => Head
             };
+
+            if (Body.Exists(segment => segment.X == newHead.X && segment.Y == newHead.Y))
+            {
+                return;
+            }
+
+            Body.Add(newHead);
+            Body.RemoveAt(0);
+
+            // Nastavení barev, aby hlava byla vždy červená
+            for (int i = 0; i < Body.Count - 1; i++)
+            {
+                Body[i] = new SnakeSegment(Body[i].X, Body[i].Y, ConsoleColor.Green);
+            }
+            Body[^1] = new SnakeSegment(Body[^1].X, Body[^1].Y, ConsoleColor.Red);
+        }
+
+        public void Grow()
+        {
+            Body.Insert(0, new SnakeSegment(Body[0].X, Body[0].Y, ConsoleColor.Green));
+        }
+
+        public bool CheckCollision(int width, int height)
+        {
+            return Head.X == width - 1 || Head.X == 0 || Head.Y == height - 1 || Head.Y == 0;
         }
     }
 
-    abstract class GameObject
+    class Berry
     {
-        public int X { get; protected set; }
-        public int Y { get; protected set; }
-        public ConsoleColor Color { get; protected set; }
+        public int X { get; private set; }
+        public int Y { get; private set; }
 
-        public GameObject(int x, int y, ConsoleColor color)
+        public Berry(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public bool CheckCollision(SnakeSegment head) => head.X == X && head.Y == Y;
+
+        public void Respawn(Random random, int width, int height)
+        {
+            X = random.Next(1, width - 2);
+            Y = random.Next(1, height - 2);
+        }
+
+        public void Draw()
+        {
+            Console.SetCursorPosition(X, Y);
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            Console.Write("■");
+        }
+    }
+
+    class Renderer
+    {
+        private int width, height;
+
+        public Renderer(int width, int height)
+        {
+            this.width = width;
+            this.height = height;
+        }
+
+        public void DrawBorder()
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            for (int i = 0; i < width; i++)
+            {
+                Console.SetCursorPosition(i, 0);
+                Console.Write("■");
+                Console.SetCursorPosition(i, height - 1);
+                Console.Write("■");
+            }
+            for (int i = 0; i < height; i++)
+            {
+                Console.SetCursorPosition(0, i);
+                Console.Write("■");
+                Console.SetCursorPosition(width - 1, i);
+                Console.Write("■");
+            }
+        }
+
+        public void DrawSnake(Snake snake)
+        {
+            foreach (var segment in snake.Body)
+            {
+                Console.SetCursorPosition(segment.X, segment.Y);
+                Console.ForegroundColor = segment.Color;
+                Console.Write("■");
+            }
+        }
+
+        public void DrawBerry(Berry berry)
+        {
+            berry.Draw();
+        }
+
+        public void DisplayGameOver(int score)
+        {
+            Console.SetCursorPosition(width / 5, height / 2);
+            Console.WriteLine($"Game Over! Score: {score}");
+            Console.SetCursorPosition(width / 5, height / 2 + 1);
+            Console.ReadKey();
+        }
+    }
+
+    class SnakeSegment
+    {
+        public int X { get; }
+        public int Y { get; }
+        public ConsoleColor Color { get; }
+
+        public SnakeSegment(int x, int y, ConsoleColor color)
         {
             X = x;
             Y = y;
             Color = color;
         }
-
-        public virtual void Draw()
-        {
-            Console.SetCursorPosition(X, Y);
-            Console.ForegroundColor = Color;
-            Console.Write("■");
-        }
-    }
-
-    class Fruit : GameObject
-    {
-        public Fruit(int x, int y) : base(x, y, ConsoleColor.DarkYellow) { }
-    }
-
-    class SnakeSegment : GameObject
-    {
-        public SnakeSegment(int x, int y, ConsoleColor color) : base(x, y, color) { }
     }
 
     enum Direction
@@ -207,5 +249,13 @@ namespace Snake
         Down,
         Left,
         Right
+    }
+
+    class Program
+    {
+        static void Main()
+        {
+            new Game().Run();
+        }
     }
 }
